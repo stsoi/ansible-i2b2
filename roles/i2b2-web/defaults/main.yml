@@ -1,0 +1,5 @@
+# destination dir for admin
+admin_dst: "/var/www/html/admin/"
+
+# webclient dst dir
+webclient_dst: "/var/www/html/webclient/"

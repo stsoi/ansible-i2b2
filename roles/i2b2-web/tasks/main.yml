@@ -1,0 +1,67 @@
+---
+
+ - name: check that we have rsync
+   yum:
+     name: rsync
+     state: latest
+
+ - name: Install apache
+   yum:
+     name: httpd
+     state: latest
+
+ - name: Install php
+   yum:
+     name: php
+     state: latest
+
+ - name: Start httpd service
+   systemd: state=started name=httpd.service enabled=yes
+ 
+
+ # Admin webclient files setup
+
+ - name: make sure /var/www/html/admin exists
+   file: path="/var/www/html/admin" state=directory
+
+ - name: Git clone admin webclient files to destination
+   git:
+      repo: "{{ i2b2_webclient_repo }}"
+      dest: "{{ admin_dst }}"
+      version: "{{ i2b2_webclient }}"
+      clone: yes
+      force: yes
+
+ - name: template i2b2_config_data.js file for admin
+   template: 
+     src: admin/i2b2_config_data.js
+     dest: "{{ admin_dst }}"
+ 
+ - name: template i2b2_loader.js file for admin
+   template: 
+     src: admin/i2b2_loader.js
+     dest: "{{ admin_dst }}js-i2b2/"
+
+  # Webclient files setup
+  
+ - name: make sure /var/www/html/webclient exists
+   file: path="/var/www/html/webclient" state=directory
+
+ - name: Git clone webclient files to destination
+   git:
+      repo: "{{ i2b2_webclient_repo }}"
+      dest: "{{ webclient_dst }}"
+      version: "{{ i2b2_webclient }}"
+      clone: yes
+      force: yes
+
+ - name: template i2b2_config_data.js file for webclient
+   template:
+      src: webclient/i2b2_config_data.js
+      dest: "{{ webclient_dst }}"
+
+
+
+
+   
+

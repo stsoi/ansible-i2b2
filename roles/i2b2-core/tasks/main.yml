@@ -1,0 +1,320 @@
+---
+# set up prerequisites
+
+   - name: Install pre-req packages
+     yum:
+       name:
+         - libselinux-python
+         - selinux-policy
+         - bzip2
+         - wget
+         - nano
+         - sudo
+         - curl
+         - postgresql
+         - postgresql-server
+       state: latest
+
+   - name: upgrade all packages
+     yum:
+       name: '*'
+       state: latest
+
+   - name: Setting selinux to permissive mode
+     selinux:
+       policy: targeted
+       state: permissive
+
+   - name: Install dependencies
+     yum:
+       name:
+         - git
+         - firewalld
+       state: present
+
+   - name: Check if PostgreSQL database is initialized
+     stat:
+       path: "/var/lib/pgsql/data/PG_VERSION"
+     register: pgdata_dir_version
+
+   - name: Ensure PostgreSQL database is initialized.
+     command: initdb -D /var/lib/pgsql/data
+     when: not pgdata_dir_version.stat.exists
+     become: true
+     become_user: postgres
+     vars:
+       ansible_ssh_pipelining: true
+     tags: postgres
+
+   - name: Start postgresql
+     systemd:
+       state: restarted
+       name: postgresql
+       enabled: yes
+     tags: postgres
+
+   - name: Download Java
+     get_url:
+       url: "{{java_url}}"
+       validate_certs: no
+       dest: "{{download_folder}}"
+     tags: jdk
+
+   - name: Unpack archive
+     unarchive:
+       src: "{{java_archive}}"
+       dest: "{{download_folder}}"
+       remote_src: yes
+     tags: jdk
+
+   - name: Fix ownership
+     file: state=directory path={{java_name}} owner=root group=root recurse=yes
+
+   - name: Make Java available for system
+     command: 'alternatives --install "/usr/bin/java" "java" "{{java_name}}/bin/java" 1'
+
+   - name: Clean up Java archive
+     file: state=absent path={{java_archive}}
+
+   - name: Set up java enviroment
+     template:
+       src: env/javaenv.sh
+       dest: /etc/profile.d/
+       owner: root
+       group: root
+       mode: 0744
+     tags: jdk
+
+   - name: Check wildfly group
+     shell: egrep -i "^wildfly" /etc/group
+     register: wildfly_group_check
+     ignore_errors: true
+
+   - name: Set up wildfly group if it does not exist
+     command: groupadd -r wildfly
+     when: wildfly_group_check is failed
+     tags: jboss
+
+   - name: Check wildfly user
+     shell: egrep -i "^wildfly:" /etc/passwd
+     register: wildfly_user_check
+     ignore_errors: true
+
+   - name: set up wildfly user
+     command: useradd -r -g wildfly -d /opt/wildfly -s /sbin/nologin wildfly
+     when: wildfly_user_check is failed
+     tags: jboss
+
+   - name: install unzip
+     yum:
+       name: unzip
+       state: latest
+
+   - name: Download WildFly from jboss.org
+     get_url:
+       url: "{{wildfly_url}}"
+       dest: "{{download_folder}}"
+     tags: jboss
+
+   - name: Extract archive
+     unarchive:
+       src: "{{wildfly_archive}}"
+       dest: "{{download_folder}}"
+       remote_src: yes
+     tags: jboss
+
+   - name: Clean up WildFly archive
+     file: state=absent path={{wildfly_archive}}
+
+   - name: Set up directories
+     file:
+       src: /opt/wildfly-12.0.0.Final
+       dest: /opt/wildfly
+       owner: wildfly
+       group: wildfly
+       state: link
+     tags: jboss
+
+   - name: Create wildfly directory
+     file:
+       path: /etc/wildfly
+       state: directory
+       mode: 0755
+     tags: jboss
+
+   - name: Copy /etc/wildlfy config
+     template:
+       src: wildfly.conf
+       dest: /etc/wildfly/
+       owner: root
+       group: root
+       mode: 0644
+     tags: jboss
+
+   - name: Copy service file
+     template:
+       src: wildfly.service
+       dest: /etc/systemd/system/
+       owner: root
+       group: root
+       mode: 0644
+     tags: jboss
+
+   - name: Copy the launch script
+     template:
+       src: launch.sh
+       dest: /opt/wildfly/bin
+       owner: wildfly
+       group: wildfly
+       mode: 0744
+     tags: jboss
+
+   - name: Copy standalone.xml for setting up the right ports
+     template:
+       src: standalone.xml
+       dest: /opt/wildfly-12.0.0.Final/standalone/configuration/
+       owner: wildfly
+       group: wildfly
+       mode: 0644
+     tags: jboss
+
+   - name: enable wildfly
+     systemd:
+        name: wildfly.service
+        enabled: yes
+     tags: jboss
+
+   - name: Copy Wildfly environment file
+     template:
+       src: env/jbossenv.sh
+       dest: /etc/profile.d/
+       owner: root
+       group: root
+       mode: 0744
+     tags: jboss
+
+   - name: Download Apache Ant
+     get_url:
+       url: "{{ant_url}}"
+       dest: "{{download_folder}}"
+     tags: ant
+
+   - name: Extract Ant archive
+     unarchive:
+       src: "{{ant_archive}}"
+       dest: "{{download_folder}}"
+       remote_src: yes
+     tags: ant
+
+   - name: Clean up Ant archive
+     file: state=absent path={{ant_archive}}
+
+   - name: Set up Ant environment
+     template:
+       src: env/antenv.sh
+       dest: /etc/profile.d/
+       owner: root
+       group: root
+       mode: 0744
+     tags: ant
+
+   - name: Create i2b2 war folder
+     file:
+       path: /opt/wildfly/standalone/deployments/i2b2.war
+       state: directory
+       mode: 0755
+     tags: axis2
+
+   - name: Create deployment file
+     file:
+       path: /opt/wildfly/standalone/deployments/i2b2.war.dodeploy
+       state: touch
+       owner: wildfly
+       group: wildfly
+       mode: 0644
+     tags: axis2
+
+   - name: Download Axis2
+     get_url:
+       url: "{{axis_url}}"
+       dest: "{{download_folder}}"
+     tags: axis2
+
+   - name: Extract Axis2 archive
+     unarchive:
+       src: "{{axis_archive}}"
+       dest: "{{download_folder}}"
+       remote_src: yes
+     tags: axis2
+
+   - name: Rename Axis2 war
+     command: mv /opt/axis2.war /opt/wildfly/standalone/deployments/axis2.zip
+     tags: axis2
+
+   - name: Extract Axis war to the right place
+     unarchive:
+       src: /opt/wildfly/standalone/deployments/axis2.zip
+       dest: /opt/wildfly/standalone/deployments/i2b2.war
+       remote_src: True
+     tags: axis2
+
+   - name: Remove unneeded axis2.zip
+     file:
+       path: /opt/wildfly/standalone/deployments/axis2.zip
+       state: absent
+     tags: axis2
+
+   - name: Clean up Axis2 archive
+     file: state=absent path={{axis_archive}}
+
+   - name: Clean up misc files in opt directory
+     command: cd /opt && rm -rf *.txt
+     become: true
+     become_user: root
+
+   - name: Set up Wildfly permissions
+     file:
+       path: /opt/wildfly-12.0.0.Final
+       state: directory
+       owner: wildfly
+       group: wildfly
+       recurse: yes
+     tags: axis2
+
+   - name: create i2b2 dir
+     file:
+       path: /opt/i2b2
+       state: directory
+       owner: root
+       group: root
+       mode: 0755
+     tags: server
+
+# Configure and deploy i2b2 server
+   - name: Git clone i2b2 core server
+     git:
+       repo: "{{ i2b2_core_server_repo }}"
+       dest: /opt/i2b2
+       version: "{{ i2b2_core_server }}"
+       clone: yes
+       force: yes
+     tags: server
+
+   - name: Stop wildfly service
+     systemd: state=stopped name=wildfly.service
+     tags: server
+
+   - name: Copy build properties file
+     template:
+       src: templates/build.properties
+       dest: "{{ server_srcdir }}"
+       owner: root
+       group: root
+       mode: 0644
+     tags: server
+
+   - name: Deploy server
+     command: /opt/apache-ant-1.9.6/bin/ant dist deploy jboss_pre_deployment_setup
+     args:
+      chdir: "{{ server_srcdir }}"
+     tags: server

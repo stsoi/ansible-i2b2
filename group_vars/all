@@ -1,0 +1,29 @@
+---
+download_folder: /opt
+
+#java jdk
+java_url: https://catalyst-artifacts.s3.amazonaws.com/jdk-8u202-linux-x64.tar.gz
+java_name: "{{download_folder}}/jdk1.8.0_202"
+java_archive: "{{download_folder}}/jdk-8u202-linux-x64.tar.gz"
+
+#apache ant
+ant_url: https://archive.apache.org/dist/ant/binaries/apache-ant-1.9.6-bin.zip
+ant_archive: "{{download_folder}}/apache-ant-1.9.6-bin.zip"
+
+#wildfly
+wildfly_url: http://download.jboss.org/wildfly/12.0.0.Final/wildfly-12.0.0.Final.zip
+wildfly_archive: "{{download_folder}}/wildfly-12.0.0.Final.zip"
+
+#apache axis2
+axis_url: http://archive.apache.org/dist/axis/axis2/java/core/1.7.1/axis2-1.7.1-war.zip
+axis_archive: "{{download_folder}}/axis2-1.7.1-war.zip"
+
+#i2b2 source repo urls
+i2b2_core_server_repo: https://github.com/i2b2/i2b2-core-server.git
+i2b2_data_repo: https://github.com/i2b2/i2b2-data.git
+i2b2_webclient_repo: https://github.com/i2b2/i2b2-webclient.git
+
+#i2b2 source versions
+i2b2_core_server: v1.7.11.0001
+i2b2_data: v1.7.11.0001
+i2b2_webclient: v1.7.11.0001
