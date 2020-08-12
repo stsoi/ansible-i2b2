@@ -2,7 +2,7 @@
 download_folder: /opt
 
 #java jdk
-java_url: https://catalyst-artifacts.s3.amazonaws.com/jdk-8u202-linux-x64.tar.gz
+java_url: https://www.samtsoi.com/java/jdk-8u202-linux-x64.tar.gz
 java_name: "{{download_folder}}/jdk1.8.0_202"
 java_archive: "{{download_folder}}/jdk-8u202-linux-x64.tar.gz"
 
